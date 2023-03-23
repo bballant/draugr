@@ -76,6 +76,19 @@ func indexFile(db *db.DB, path string, info fs.FileInfo) error {
 	return nil
 }
 
+func IndexPath(db *db.DB, path string) error {
+	var walkFile func(string, fs.FileInfo, error) error
+	walkFile = func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return fs.SkipDir
+		}
+		indexFile(db, path, info)
+		return nil
+	}
+	filepath.Walk(path, walkFile)
+	return nil
+}
+
 func main() {
 	var dirFlag = flag.String("dir", ".", "index current dir")
 	var helpFlag = flag.Bool("help", false, "Show help")
@@ -86,14 +99,6 @@ func main() {
 	}
 
 	var db = db.NewMapDB()
-	var walkFile func(string, fs.FileInfo, error) error
-	walkFile = func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return fs.SkipDir
-		}
-		indexFile(&db, path, info)
-		return nil
-	}
-	filepath.Walk(*dirFlag, walkFile)
+	IndexPath(&db, *dirFlag)
 	fmt.Printf("%v\n", db.TermIndex.GetTerm("files"))
 }
