@@ -51,6 +51,7 @@ func indexFile(db *db.DB, path string, info fs.FileInfo) error {
 		return nil
 	}
 	if info.IsDir() {
+		db.PathIndex.SetModTime(path, currModTime)
 		log.Printf("not indexing dir %s\n", path)
 		return nil
 	}
@@ -61,14 +62,16 @@ func indexFile(db *db.DB, path string, info fs.FileInfo) error {
 	log.Printf("%v is after %v, indexing %v\n", currModTime, prevModTime, path)
 	newTokens := words.Tokenize(string(bs))
 	oldTokens := db.PathTermIndex.GetTerms(path)
-	fmt.Printf("new %v\n", newTokens)
-	fmt.Printf("old %v\n", oldTokens)
 	addToks, remToks := addsAndRems(newTokens, oldTokens)
-	fmt.Printf("add %v\n", addToks)
-	fmt.Printf("rem %v\n", remToks)
-	// old terms - current terms = terms to delete
-	// boost count for all add terms
-	// drop count for all delete terms
+	//fmt.Printf("add %v\n", strings.Join(addToks, "|"))
+	//fmt.Printf("rem %v\n", strings.Join(remToks, "|"))
+	for _, tok := range addToks {
+		db.TermIndex.SaveTerm(tok, path)
+	}
+	for _, tok := range remToks {
+		db.TermIndex.RemoveTerm(tok, path)
+	}
+	db.PathTermIndex.SetTerms(path, newTokens)
 	db.PathIndex.SetModTime(path, currModTime)
 	return nil
 }
@@ -92,4 +95,5 @@ func main() {
 		return nil
 	}
 	filepath.Walk(*dirFlag, walkFile)
+	fmt.Printf("%v\n", db.TermIndex.GetTerm("files"))
 }

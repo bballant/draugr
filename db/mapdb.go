@@ -52,6 +52,21 @@ func (m MapTermIndex) SaveTerm(term string, path string) (TermInfo, error) {
 	return termInfo, nil
 }
 
+func (m MapTermIndex) RemoveTerm(term string, path string) (TermInfo, error) {
+	termInfo := m.GetTerm(term)
+	if termInfo.isEmpty() {
+		return termInfo, nil
+	}
+	currCount := termInfo.PathCount.GetCount(path)
+	if currCount <= 0 {
+		return termInfo, nil
+	}
+	termInfo.PathCount.SetCount(path, currCount-1)
+	termInfo.Count--
+	m[term] = termInfo
+	return termInfo, nil
+}
+
 // PathTermIndex Interface
 
 type MapPathTermIndex map[string][]string

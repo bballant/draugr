@@ -27,8 +27,10 @@ func Tokenize(str string) []string {
 	res := []string{}
 	for _, v := range words {
 		word := keyify(v)
-		if _, stopword := stopwords[word]; !stopword {
-			res = append(res, word)
+		if len(word) > 2 && len(word) < 20 {
+			if _, is_stopword := stopwords[word]; !is_stopword {
+				res = append(res, word)
+			}
 		}
 
 	}

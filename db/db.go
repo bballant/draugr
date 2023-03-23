@@ -29,6 +29,7 @@ type PathIndex interface {
 
 type TermIndex interface {
 	SaveTerm(term string, path string) (TermInfo, error)
+	RemoveTerm(term string, path string) (TermInfo, error)
 	GetTerm(term string) TermInfo
 }
 
