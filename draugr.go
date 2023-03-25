@@ -47,33 +47,32 @@ func indexFile(db *db.DB, path string, info fs.FileInfo) error {
 	prevModTime := db.PathIndex.GetModTime(path)
 	currModTime := info.ModTime()
 	if !currModTime.After(prevModTime) {
-		log.Printf("%v is not after %v, not indexing %s\n", currModTime, prevModTime, path)
+		log.Printf("'%v' <= '%v', not indexing %s\n", currModTime, prevModTime, path)
 		return nil
 	}
 	if info.IsDir() {
-		db.PathIndex.SetModTime(path, currModTime)
 		log.Printf("not indexing dir %s\n", path)
-		return nil
+		return db.PathIndex.SetModTime(path, currModTime)
 	}
 	bs, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	log.Printf("%v is after %v, indexing %v\n", currModTime, prevModTime, path)
+	log.Printf("'%v' > '%v', indexing %v\n", currModTime, prevModTime, path)
 	newTokens := words.Tokenize(string(bs))
 	oldTokens := db.PathTermIndex.GetTerms(path)
 	addToks, remToks := addsAndRems(newTokens, oldTokens)
-	//fmt.Printf("add %v\n", strings.Join(addToks, "|"))
-	//fmt.Printf("rem %v\n", strings.Join(remToks, "|"))
 	for _, tok := range addToks {
 		db.TermIndex.SaveTerm(tok, path)
 	}
 	for _, tok := range remToks {
 		db.TermIndex.RemoveTerm(tok, path)
 	}
-	db.PathTermIndex.SetTerms(path, newTokens)
-	db.PathIndex.SetModTime(path, currModTime)
-	return nil
+	err = db.PathTermIndex.SetTerms(path, newTokens)
+	if err != nil {
+		return err
+	}
+	return db.PathIndex.SetModTime(path, currModTime)
 }
 
 func IndexPath(db *db.DB, path string) error {
@@ -82,16 +81,45 @@ func IndexPath(db *db.DB, path string) error {
 		if err != nil {
 			return fs.SkipDir
 		}
-		indexFile(db, path, info)
-		return nil
+		return indexFile(db, path, info)
 	}
 	filepath.Walk(path, walkFile)
 	return nil
 }
 
+type SearchResult struct {
+	Path  string
+	Count int
+}
+
+func Search(db_ *db.DB, terms []string) []SearchResult {
+	pathTotals := map[string]int{}
+	for _, term := range terms {
+		inf := db_.TermIndex.GetTerm(term)
+		if inf != nil {
+			for _, path := range inf.PathCount.GetPaths() {
+				if _, ok := pathTotals[path]; !ok {
+					pathTotals[path] = 0
+				}
+				pathTotals[path] += inf.PathCount.GetCount(path)
+			}
+		}
+	}
+	results := make([]SearchResult, len(pathTotals))
+	i := 0
+	for k, v := range pathTotals {
+		results[i] = SearchResult{k, v}
+		i++
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Count > results[j].Count
+	})
+	return results
+}
+
 func main() {
-	var dirFlag = flag.String("dir", ".", "index current dir")
 	var helpFlag = flag.Bool("help", false, "Show help")
+	var dirFlag = flag.String("dir", ".", "index current dir")
 	flag.Parse()
 	if *helpFlag {
 		flag.Usage()

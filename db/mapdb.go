@@ -6,6 +6,16 @@ import "time"
 
 type MapPathCount map[string]int
 
+func (m MapPathCount) GetPaths() []string {
+	keys := make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
 func (m MapPathCount) GetCount(path string) int {
 	return m[path]
 }
@@ -35,16 +45,16 @@ func (m MapPathIndex) GetModTime(path string) time.Time {
 
 // TermIndex Interface
 
-type MapTermIndex map[string]TermInfo
+type MapTermIndex map[string]*TermInfo
 
-func (m MapTermIndex) GetTerm(term string) TermInfo {
+func (m MapTermIndex) GetTerm(term string) *TermInfo {
 	return m[term]
 }
 
-func (m MapTermIndex) SaveTerm(term string, path string) (TermInfo, error) {
+func (m MapTermIndex) SaveTerm(term string, path string) (*TermInfo, error) {
 	termInfo := m.GetTerm(term)
-	if termInfo.isEmpty() {
-		termInfo = TermInfo{term, 0, MapPathCount{}}
+	if termInfo == nil {
+		termInfo = &TermInfo{term, 0, MapPathCount{}}
 	}
 	termInfo.PathCount.IncCount(path)
 	termInfo.Count++
@@ -52,9 +62,9 @@ func (m MapTermIndex) SaveTerm(term string, path string) (TermInfo, error) {
 	return termInfo, nil
 }
 
-func (m MapTermIndex) RemoveTerm(term string, path string) (TermInfo, error) {
+func (m MapTermIndex) RemoveTerm(term string, path string) (*TermInfo, error) {
 	termInfo := m.GetTerm(term)
-	if termInfo.isEmpty() {
+	if termInfo == nil {
 		return termInfo, nil
 	}
 	currCount := termInfo.PathCount.GetCount(path)

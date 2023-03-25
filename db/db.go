@@ -10,13 +10,8 @@ type TermInfo struct {
 	PathCount PathCount
 }
 
-var EmptyTerm = TermInfo{}
-
-func (t *TermInfo) isEmpty() bool {
-	return *t == EmptyTerm
-}
-
 type PathCount interface {
+	GetPaths() []string
 	GetCount(path string) int
 	IncCount(path string) error
 	SetCount(path string, count int) error
@@ -28,9 +23,9 @@ type PathIndex interface {
 }
 
 type TermIndex interface {
-	SaveTerm(term string, path string) (TermInfo, error)
-	RemoveTerm(term string, path string) (TermInfo, error)
-	GetTerm(term string) TermInfo
+	SaveTerm(term string, path string) (*TermInfo, error)
+	RemoveTerm(term string, path string) (*TermInfo, error)
+	GetTerm(term string) *TermInfo
 }
 
 type PathTermIndex interface {
