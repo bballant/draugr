@@ -10,14 +10,14 @@ import (
 
 func TestWords(t *testing.T) {
 
-	var db = db.NewMapDB()
-	IndexPath(&db, "test_files")
+	var _db = db.NewMapDB()
+	db.IndexPath(&_db, "test_files")
 
-	fmt.Println(db.TermIndex.GetTerm("name").Count)
+	fmt.Println(_db.TermIndex.GetTerm("name").Count)
 
-	if db.TermIndex.GetTerm("verrazano").Count != 17 {
+	if _db.TermIndex.GetTerm("verrazano").Count != 17 {
 		t.Error(`"verrazano" count should be 17`)
 	}
 
-	fmt.Println(Search(&db, words.Tokenize("wood fire")))
+	fmt.Println(Search(&_db, words.Tokenize("wood fire")))
 }
