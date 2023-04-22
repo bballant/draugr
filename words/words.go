@@ -36,3 +36,17 @@ func Tokenize(str string) []string {
 	}
 	return res
 }
+
+func Occurances(str string, doc string) int {
+	strToks := Tokenize(str)
+	docToks := Tokenize(doc)
+	count := 0
+	for _, tok := range strToks {
+		for _, dTok := range docToks {
+			if tok == dTok {
+				count++
+			}
+		}
+	}
+	return count
+}

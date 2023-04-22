@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/bballant/draugr/words"
 )
@@ -77,6 +78,32 @@ func IndexPath(db *DB, path string) error {
 	walkFile = func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return fs.SkipDir
+		}
+		return indexFile(db, path, info)
+	}
+	filepath.Walk(path, walkFile)
+	return nil
+}
+
+func hasExtension(filename string, extensions []string) bool {
+	ext := filepath.Ext(filename)
+	for _, e := range extensions {
+		if strings.ToLower(e) == strings.ToLower(ext) {
+			return true
+		}
+	}
+	return false
+}
+
+func IndexPathForExts(db *DB, path string, extensions []string) error {
+	var walkFile func(string, fs.FileInfo, error) error
+	walkFile = func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return fs.SkipDir
+		}
+		if info.IsDir() || !hasExtension(info.Name(), extensions) {
+			//log.Printf("Skipping %s\n", info.Name())
+			return nil
 		}
 		return indexFile(db, path, info)
 	}
