@@ -41,6 +41,31 @@ func addsAndRems(newTokens []string, oldTokens []string) (adds []string, rems []
 	return adds, rems
 }
 
+func removeAllTerms(index Index, path string) error {
+	return nil
+}
+
+func indexIndexFile(index Index, path string, info fs.FileInfo) error {
+	if info.IsDir() {
+		log.Printf("not indexing dir %s\n", path)
+		return nil
+	}
+	bs, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	log.Printf("indexing %v\n", path)
+	newTokens := words.Tokenize(string(bs))
+	removeAllTerms(index, path)
+	for _, tok := range newTokens {
+		_, err := index.SaveTerm(tok, path)
+		if err != nil {
+			log.Printf("unable to save term %s", tok)
+		}
+	}
+	return nil
+}
+
 func indexFile(db *DB, path string, info fs.FileInfo) error {
 	prevModTime := db.PathIndex.GetModTime(path)
 	currModTime := info.ModTime()
@@ -106,6 +131,22 @@ func IndexPathForExts(db *DB, path string, extensions []string) error {
 			return nil
 		}
 		return indexFile(db, path, info)
+	}
+	filepath.Walk(path, walkFile)
+	return nil
+}
+
+func IndexIndexPathForExts(index Index, path string, extensions []string) error {
+	var walkFile func(string, fs.FileInfo, error) error
+	walkFile = func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return fs.SkipDir
+		}
+		if info.IsDir() || !hasExtension(info.Name(), extensions) {
+			//log.Printf("Skipping %s\n", info.Name())
+			return nil
+		}
+		return indexIndexFile(index, path, info)
 	}
 	filepath.Walk(path, walkFile)
 	return nil

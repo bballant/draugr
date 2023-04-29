@@ -1,19 +1,20 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
+
+	"github.com/getlantern/systray"
+	"github.com/getlantern/systray/example/icon"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+
 	"fyne.io/fyne/v2/widget"
 	"github.com/bballant/draugr/db"
 	"github.com/bballant/draugr/words"
@@ -26,6 +27,33 @@ func init() {
 type SearchResult struct {
 	Path  string
 	Count int
+}
+
+func SearchIndex(index db.Index, tokens []string) []SearchResult {
+	pathTotals := map[string]int{}
+	for _, token := range tokens {
+		term := index.GetTerm(token)
+		if term == nil {
+			continue
+		}
+		for _, path := range term.Paths {
+			if _, ok := pathTotals[path]; !ok {
+				pathTotals[path] = 0
+			}
+			basicScore := db.BasicScore(*index.GetIndexInfo(), *term, path)
+			pathTotals[path] += basicScore
+		}
+	}
+	results := make([]SearchResult, len(pathTotals))
+	i := 0
+	for k, v := range pathTotals {
+		results[i] = SearchResult{k, v}
+		i++
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Count > results[j].Count
+	})
+	return results
 }
 
 func Search(db_ *db.DB, terms []string) []SearchResult {
@@ -70,39 +98,6 @@ func openTerminalAt(path string) error {
 	dirStr, _ := filepath.Split(path)
 	cmd := exec.Command("gnome-terminal", "--working-directory="+dirStr)
 	return cmd.Run()
-}
-
-func showi3Icon() {
-	// create a new i3bar output
-	bar := i3.NewOutput()
-
-	// create a simple text block
-	helloBlock := i3.NewBlock("Hello, World!")
-	bar.AddBlock(helloBlock)
-
-	// create an icon block
-	iconBlock := i3.NewBlock("")
-	iconBlock.FullText = "" // Unicode icon code for a gear icon
-	iconBlock.Color = "#ffffff"
-	bar.AddBlock(iconBlock)
-
-	// start the i3bar output loop
-	bar.Start()
-
-	// update the icon block every second
-	ticker := time.NewTicker(time.Second)
-	for range ticker.C {
-		// set the icon block's full text to the current time
-		iconBlock.FullText = time.Now().Format("15:04:05")
-
-		// marshal the i3bar output to JSON and write it to stdout
-		jsonData, err := json.Marshal(bar)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
-			continue
-		}
-		fmt.Println(string(jsonData))
-	}
 }
 
 func main() {
@@ -171,5 +166,28 @@ func main() {
 		listContainer,
 	)
 	myWin.SetContent(content)
+
+	//if desk, ok := myApp.(desktop.App); ok {
+	//	fmt.Println("Desktop")
+	//	m := fyne.NewMenu("MyApp",
+	//		fyne.NewMenuItem("Show", func() {
+	//			myWin.Show()
+	//		}))
+	//	desk.SetSystemTrayMenu(m)
+	//}
+
+	myWin.SetCloseIntercept(func() {
+		myWin.Hide()
+	})
+	//systray.Run(onReady, onExit)
 	myWin.ShowAndRun()
+}
+
+func onExit() {
+}
+
+func onReady() {
+	systray.SetTemplateIcon(icon.Data, icon.Data)
+	systray.SetTitle("Draugr")
+	systray.SetTooltip("Draugr comes from the swamp")
 }
