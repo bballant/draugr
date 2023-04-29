@@ -28,6 +28,14 @@ func (mi *MapIndex) SetIndexInfo(info *IndexInfo) error {
 	return nil
 }
 
+func (mi *MapIndex) AllTerms() []*Term {
+	terms := make([]*Term, 0, len(mi.termMap))
+	for _, v := range mi.termMap {
+		terms = append(terms, v)
+	}
+	return terms
+}
+
 func (mi *MapIndex) SaveTerm(term string, path string) (*Term, error) {
 	if term == "" || path == "" {
 		return nil, errors.New("term or path cannot be empty")

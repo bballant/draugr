@@ -41,8 +41,11 @@ func addsAndRems(newTokens []string, oldTokens []string) (adds []string, rems []
 	return adds, rems
 }
 
-func removeAllTerms(index Index, path string) error {
-	return nil
+func removeAllTerms(index Index, path string) {
+	allTerms := index.AllTerms()
+	for _, term := range allTerms {
+		index.RemoveTerm(term.Token, path)
+	}
 }
 
 func indexIndexFile(index Index, path string, info fs.FileInfo) error {

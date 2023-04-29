@@ -19,9 +19,10 @@ type IndexInfo struct {
 type Index interface {
 	GetIndexInfo() *IndexInfo
 	SetIndexInfo(*IndexInfo) error
-	SaveTerm(term string, path string) (*Term, error)
-	RemoveTerm(term string, path string) (*Term, error)
-	GetTerm(term string) *Term
+	AllTerms() []*Term
+	SaveTerm(token string, path string) (*Term, error)
+	RemoveTerm(token string, path string) (*Term, error)
+	GetTerm(token string) *Term
 }
 
 func BasicScore(indexInfo IndexInfo, term Term, path string) int {

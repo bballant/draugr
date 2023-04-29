@@ -112,16 +112,19 @@ func main() {
 		flag.Usage()
 		return
 	}
-	var _db = db.NewMapDB()
-	db.IndexPathForExts(&_db, *dirFlag, strings.Split(*extensionFilterFlag, " "))
 
 	if *searchFlag != "" {
-		res := Search(&_db, words.Tokenize(*searchFlag))
+		var _index = db.NewMapIndex()
+		db.IndexIndexPathForExts(_index, *dirFlag, strings.Split(*extensionFilterFlag, " "))
+		res := SearchIndex(_index, words.Tokenize(*searchFlag))
 		for _, v := range res {
-			fmt.Println(v.Path)
+			fmt.Println(v)
 		}
 		return
 	}
+
+	var _db = db.NewMapDB()
+	db.IndexPathForExts(&_db, *dirFlag, strings.Split(*extensionFilterFlag, " "))
 
 	myApp := app.New()
 	myWin := myApp.NewWindow("Search App")
