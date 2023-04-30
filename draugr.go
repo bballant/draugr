@@ -36,7 +36,7 @@ func SearchIndex(index db.Index, tokens []string) []SearchResult {
 		if term == nil {
 			continue
 		}
-		for _, path := range term.Paths {
+		for _, path := range db.Unique(term.Paths) {
 			if _, ok := pathTotals[path]; !ok {
 				pathTotals[path] = 0
 			}
@@ -120,6 +120,7 @@ func main() {
 		for _, v := range res {
 			fmt.Println(v)
 		}
+		fmt.Println(_index.GetTerm("water"))
 		return
 	}
 

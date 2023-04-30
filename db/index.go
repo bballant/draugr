@@ -2,13 +2,12 @@ package db
 
 import (
 	"math"
-	"os"
-	"strings"
+
+	"github.com/bballant/draugr/words"
 )
 
 type Term struct {
 	Token string
-	Count int
 	Paths []string
 }
 
@@ -25,6 +24,19 @@ type Index interface {
 	GetTerm(token string) *Term
 }
 
+func Unique(strs []string) []string {
+	strMap := make(map[string]struct{})
+	uniqueStrings := []string{}
+	for _, s := range strs {
+		_, ok := strMap[s]
+		if !ok {
+			strMap[s] = struct{}{}
+			uniqueStrings = append(uniqueStrings, s)
+		}
+	}
+	return uniqueStrings
+}
+
 func BasicScore(indexInfo IndexInfo, term Term, path string) int {
 	tf := 0
 	for _, s := range term.Paths {
@@ -33,25 +45,13 @@ func BasicScore(indexInfo IndexInfo, term Term, path string) int {
 		}
 	}
 	pathScore := 0
-	for _, path := range term.Paths {
-		dirs := strings.Split(path, string(os.PathSeparator))
-		for _, dir := range dirs {
-			if dir == term.Token {
-				pathScore = pathScore + 2
-			}
+	dirs := words.Tokenize(path)
+	for _, dir := range dirs {
+		if dir == term.Token {
+			pathScore = pathScore + 2
 		}
 	}
 	return tf + pathScore
-}
-
-func countUnique(stringsSlice []string) int {
-	uniqueStrings := make(map[string]struct{})
-
-	for _, s := range stringsSlice {
-		uniqueStrings[s] = struct{}{}
-	}
-
-	return len(uniqueStrings)
 }
 
 func TFIDFScore(indexInfo IndexInfo, term Term, path string) float64 {
@@ -62,7 +62,7 @@ func TFIDFScore(indexInfo IndexInfo, term Term, path string) float64 {
 			tf++
 		}
 	}
-	df := countUnique(term.Paths)
+	df := len(Unique(term.Paths))
 	idf := math.Log(float64(1+numDocuments) / float64(1+df))
 	tfIdf := float64(tf) * idf
 	return tfIdf
