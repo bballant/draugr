@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sort"
 	"strings"
 
 	"github.com/bballant/draugr/db"
@@ -14,38 +13,6 @@ import (
 
 func init() {
 	//log.SetOutput(ioutil.Discard)
-}
-
-type SearchResult struct {
-	Path  string
-	Count int
-}
-
-func SearchIndex(index db.Index, tokens []string) []SearchResult {
-	pathTotals := map[string]int{}
-	for _, token := range tokens {
-		term := index.GetTerm(token)
-		if term == nil {
-			continue
-		}
-		for _, path := range db.Unique(term.Paths) {
-			if _, ok := pathTotals[path]; !ok {
-				pathTotals[path] = 0
-			}
-			basicScore := db.BasicScore(*index.GetIndexInfo(), *term, path)
-			pathTotals[path] += basicScore
-		}
-	}
-	results := make([]SearchResult, len(pathTotals))
-	i := 0
-	for k, v := range pathTotals {
-		results[i] = SearchResult{k, v}
-		i++
-	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Count > results[j].Count
-	})
-	return results
 }
 
 func main() {
@@ -70,7 +37,7 @@ func main() {
 	if *searchFlag != "" {
 		var _index = db.NewMapIndex()
 		db.IndexPathForExts(_index, *dirFlag, strings.Split(*extensionFilterFlag, " "))
-		res := SearchIndex(_index, words.Tokenize(*searchFlag))
+		res := db.SearchIndex(_index, words.Tokenize(*searchFlag))
 		for _, v := range res {
 			if *debugFlag {
 				fmt.Println(v)

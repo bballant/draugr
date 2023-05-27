@@ -16,13 +16,13 @@ func TestWords(t *testing.T) {
 		t.Error(`"verrazano" count should be 17`)
 	}
 
-	if SearchIndex(_db, words.Tokenize("wood fire"))[0].Path !=
+	if db.SearchIndex(_db, words.Tokenize("wood fire"))[0].Path !=
 		"test_files/essays/The-Hudson-River-And-Its-Early-Names-Susan-Fenimore-Cooper.txt" {
 		t.Error(`"wood fire" should return "The Hudson ..." first`)
 
 	}
 
-	verneInTitle := SearchIndex(_db, words.Tokenize("Verne"))
+	verneInTitle := db.SearchIndex(_db, words.Tokenize("Verne"))
 
 	if verneInTitle[0].Count != 6 {
 		t.Error(`"Verne" count should be 6 for one book because of title`)
