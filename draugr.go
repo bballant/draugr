@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"path/filepath"
+	"io"
+	"log"
 	"sort"
 	"strings"
 
@@ -47,46 +48,9 @@ func SearchIndex(index db.Index, tokens []string) []SearchResult {
 	return results
 }
 
-func Search(db_ *db.DB, terms []string) []SearchResult {
-	pathTotals := map[string]int{}
-	for _, term := range terms {
-		inf := db_.TermIndex.GetTerm(term)
-		if inf != nil {
-			for _, path := range inf.PathCount.GetPaths() {
-				if _, ok := pathTotals[path]; !ok {
-					pathTotals[path] = 0
-				}
-				pathTotals[path] += inf.PathCount.GetCount(path)
-				// hack in filename match boost
-				_, file := filepath.Split(path)
-				fileMatches := words.Occurances(term, file)
-				pathTotals[path] += 5 * fileMatches
-			}
-		}
-	}
-	results := make([]SearchResult, len(pathTotals))
-	i := 0
-	for k, v := range pathTotals {
-		results[i] = SearchResult{k, v}
-		i++
-	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Count > results[j].Count
-	})
-	return results
-}
-
-func pathEnd(path string, lastN int) string {
-	if len(path) <= lastN {
-		return path
-	}
-	res := []rune(path[len(path)-lastN:])
-	res[0] = '>'
-	return string(res)
-}
-
 func main() {
 	var helpFlag = flag.Bool("help", false, "Show help")
+	var debugFlag = flag.Bool("debug", false, "Print a lot of stuff")
 	var dirFlag = flag.String("dir", ".", "index dir")
 	var searchFlag = flag.String("search", "", "search terms")
 	var extensionFilterFlag = flag.String(
@@ -99,32 +63,20 @@ func main() {
 		return
 	}
 
-	if *searchFlag != "" {
-		var _index = db.NewMapIndex()
-		db.IndexIndexPathForExts(_index, *dirFlag, strings.Split(*extensionFilterFlag, " "))
-		res := SearchIndex(_index, words.Tokenize(*searchFlag))
-		for _, v := range res {
-			fmt.Println(v)
-		}
-		return
+	if !*debugFlag {
+		log.SetOutput(io.Discard)
 	}
 
-	var _db = db.NewMapDB()
-	//db.IndexPathForExts(&_db, *dirFlag, strings.Split(*extensionFilterFlag, " "))
-	var items []string
-
-	_ /*doSearch*/ = func(term string) {
-		res_ := Search(&_db, words.Tokenize(term))
-		resText := ""
-		max := len(res_)
-		if max > 10 {
-			max = 10
-		}
-		items = []string{}
-		for _, v := range res_[:max] {
-			// TODO - separate display from data
-			cleanPath := pathEnd(v.Path, 1000)
-			items = append(items, fmt.Sprintf("%s%s (%d)", resText, cleanPath, v.Count))
+	if *searchFlag != "" {
+		var _index = db.NewMapIndex()
+		db.IndexPathForExts(_index, *dirFlag, strings.Split(*extensionFilterFlag, " "))
+		res := SearchIndex(_index, words.Tokenize(*searchFlag))
+		for _, v := range res {
+			if *debugFlag {
+				fmt.Println(v)
+			} else {
+				fmt.Println(v.Path)
+			}
 		}
 	}
 
