@@ -30,17 +30,56 @@ type Index interface {
 	GetTerm(token string) *Term
 }
 
-func Unique(strs []string) []string {
-	strMap := make(map[string]struct{})
-	uniqueStrings := []string{}
-	for _, s := range strs {
-		_, ok := strMap[s]
-		if !ok {
-			strMap[s] = struct{}{}
-			uniqueStrings = append(uniqueStrings, s)
+func IndexPathForExts(index Index, path string, extensions []string) error {
+	var walkFile = func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return fs.SkipDir
+		}
+		// node modules are the worst
+		if strings.Contains(path, "node_modules") ||
+			strings.Contains(path, "gogol") ||
+			strings.Contains(path, "amazonka") {
+			return fs.SkipDir
+		}
+		if info.IsDir() || !hasExtension(info.Name(), extensions) {
+			return nil
+		}
+		return indexFile(index, path, info)
+	}
+	filepath.Walk(path, walkFile)
+	return nil
+}
+
+type SearchResult struct {
+	Path  string
+	Count int
+}
+
+func SearchIndex(index Index, tokens []string) []SearchResult {
+	pathTotals := map[string]int{}
+	for _, token := range tokens {
+		term := index.GetTerm(token)
+		if term == nil {
+			continue
+		}
+		for _, path := range unique(term.Paths) {
+			if _, ok := pathTotals[path]; !ok {
+				pathTotals[path] = 0
+			}
+			basicScore := BasicScore(*index.GetIndexInfo(), *term, path)
+			pathTotals[path] += basicScore
 		}
 	}
-	return uniqueStrings
+	results := make([]SearchResult, len(pathTotals))
+	i := 0
+	for k, v := range pathTotals {
+		results[i] = SearchResult{k, v}
+		i++
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Count > results[j].Count
+	})
+	return results
 }
 
 func BasicScore(indexInfo IndexInfo, term Term, path string) int {
@@ -68,10 +107,23 @@ func TFIDFScore(indexInfo IndexInfo, term Term, path string) float64 {
 			tf++
 		}
 	}
-	df := len(Unique(term.Paths))
+	df := len(unique(term.Paths))
 	idf := math.Log(float64(1+numDocuments) / float64(1+df))
 	tfIdf := float64(tf) * idf
 	return tfIdf
+}
+
+func unique(strs []string) []string {
+	strMap := make(map[string]struct{})
+	uniqueStrings := []string{}
+	for _, s := range strs {
+		_, ok := strMap[s]
+		if !ok {
+			strMap[s] = struct{}{}
+			uniqueStrings = append(uniqueStrings, s)
+		}
+	}
+	return uniqueStrings
 }
 
 func removeAllTerms(index Index, path string) {
@@ -110,50 +162,4 @@ func hasExtension(filename string, extensions []string) bool {
 		}
 	}
 	return false
-}
-
-func IndexPathForExts(index Index, path string, extensions []string) error {
-	var walkFile = func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return fs.SkipDir
-		}
-		if info.IsDir() || !hasExtension(info.Name(), extensions) {
-			return nil
-		}
-		return indexFile(index, path, info)
-	}
-	filepath.Walk(path, walkFile)
-	return nil
-}
-
-type SearchResult struct {
-	Path  string
-	Count int
-}
-
-func SearchIndex(index Index, tokens []string) []SearchResult {
-	pathTotals := map[string]int{}
-	for _, token := range tokens {
-		term := index.GetTerm(token)
-		if term == nil {
-			continue
-		}
-		for _, path := range Unique(term.Paths) {
-			if _, ok := pathTotals[path]; !ok {
-				pathTotals[path] = 0
-			}
-			basicScore := BasicScore(*index.GetIndexInfo(), *term, path)
-			pathTotals[path] += basicScore
-		}
-	}
-	results := make([]SearchResult, len(pathTotals))
-	i := 0
-	for k, v := range pathTotals {
-		results[i] = SearchResult{k, v}
-		i++
-	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Count > results[j].Count
-	})
-	return results
 }
