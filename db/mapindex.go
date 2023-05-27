@@ -2,7 +2,11 @@ package db
 
 import (
 	"errors"
+	"sync"
 )
+
+var mmu sync.Mutex
+var imu sync.Mutex
 
 type MapIndex struct {
 	indexInfo *IndexInfo
@@ -24,16 +28,17 @@ func (mi *MapIndex) SetIndexInfo(info *IndexInfo) error {
 	if info == nil {
 		return errors.New("nil IndexInfo provided")
 	}
+	imu.Lock()
 	mi.indexInfo = info
+	imu.Unlock()
 	return nil
 }
 
-func (mi *MapIndex) AllTerms() []*Term {
-	terms := make([]*Term, 0, len(mi.termMap))
-	for _, v := range mi.termMap {
-		terms = append(terms, v)
-	}
-	return terms
+func (mi *MapIndex) AddPath(path string) *IndexInfo {
+	imu.Lock()
+	mi.indexInfo.Paths = append(mi.indexInfo.Paths, path)
+	imu.Unlock()
+	return mi.indexInfo
 }
 
 func (mi *MapIndex) SaveTerm(term string, path string) (*Term, error) {
@@ -41,6 +46,7 @@ func (mi *MapIndex) SaveTerm(term string, path string) (*Term, error) {
 		return nil, errors.New("term or path cannot be empty")
 	}
 
+	mmu.Lock()
 	t, ok := mi.termMap[term]
 	if !ok {
 		t = &Term{Token: term, Paths: []string{}}
@@ -48,6 +54,7 @@ func (mi *MapIndex) SaveTerm(term string, path string) (*Term, error) {
 	}
 
 	t.Paths = append(t.Paths, path)
+	mmu.Unlock()
 	return t, nil
 }
 
@@ -56,6 +63,7 @@ func (mi *MapIndex) RemoveTerm(term string, path string) (*Term, error) {
 		return nil, errors.New("term or path cannot be empty")
 	}
 
+	mmu.Lock()
 	t, ok := mi.termMap[term]
 	if !ok {
 		return nil, errors.New("term not found")
@@ -71,6 +79,7 @@ func (mi *MapIndex) RemoveTerm(term string, path string) (*Term, error) {
 	if len(t.Paths) == 0 {
 		delete(mi.termMap, term)
 	}
+	mmu.Unlock()
 	return t, nil
 }
 

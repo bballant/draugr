@@ -24,7 +24,7 @@ type IndexInfo struct {
 type Index interface {
 	GetIndexInfo() *IndexInfo
 	SetIndexInfo(*IndexInfo) error
-	AllTerms() []*Term
+	AddPath(path string) *IndexInfo
 	SaveTerm(token string, path string) (*Term, error)
 	RemoveTerm(token string, path string) (*Term, error)
 	GetTerm(token string) *Term
@@ -44,7 +44,8 @@ func IndexPathForExts(index Index, path string, extensions []string) error {
 		if info.IsDir() || !hasExtension(info.Name(), extensions) {
 			return nil
 		}
-		return indexFile(index, path, info)
+		go indexFile(index, path, info)
+		return nil
 	}
 	filepath.Walk(path, walkFile)
 	return nil
@@ -126,13 +127,6 @@ func unique(strs []string) []string {
 	return uniqueStrings
 }
 
-func removeAllTerms(index Index, path string) {
-	allTerms := index.AllTerms()
-	for _, term := range allTerms {
-		index.RemoveTerm(term.Token, path)
-	}
-}
-
 func indexFile(index Index, path string, info fs.FileInfo) error {
 	if info.IsDir() {
 		log.Printf("not indexing dir %s\n", path)
@@ -144,13 +138,13 @@ func indexFile(index Index, path string, info fs.FileInfo) error {
 	}
 	log.Printf("indexing %v\n", path)
 	newTokens := words.Tokenize(string(bs))
-	removeAllTerms(index, path)
-	for _, tok := range newTokens {
-		_, err := index.SaveTerm(tok, path)
+	for _, _tok := range newTokens {
+		_, err := index.SaveTerm(_tok, path)
 		if err != nil {
-			log.Printf("unable to save term %s", tok)
+			log.Printf("unable to save term %s", _tok)
 		}
 	}
+	index.AddPath(path)
 	return nil
 }
 

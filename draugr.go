@@ -88,6 +88,7 @@ func main() {
 	var debugFlag = flag.Bool("debug", false, "Print a lot of stuff")
 	var serveFlag = flag.Bool("serve", false, "Run as service")
 	var clientFlag = flag.Bool("client", false, "Run as client")
+	var indexOnly = flag.Bool("indexOnly", false, "Run as client")
 	var dirFlag = flag.String("dir", ".", "index dir")
 	var searchFlag = flag.String("search", "", "search terms")
 	var extensionFilterFlag = flag.String(
@@ -102,6 +103,14 @@ func main() {
 
 	if !*debugFlag {
 		log.SetOutput(io.Discard)
+	}
+
+	if *indexOnly {
+		var _index = db.NewMapIndex()
+		var extensions = strings.Split(*extensionFilterFlag, " ")
+		db.IndexPathForExts(_index, *dirFlag, extensions)
+		fmt.Printf("Done indexing %d files.\n", len(_index.GetIndexInfo().Paths))
+		return
 	}
 
 	if *serveFlag || (*searchFlag != "" && !*clientFlag) {
