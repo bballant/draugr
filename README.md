@@ -4,24 +4,53 @@ Draugr is a toy search engine written in Go. It uses TF-IDF (Term Frequency-Inve
 
 ## Getting Started
 
-TODO: This isn't how it works
 
-1. Build the executable:
-
-   ```
-   go build
-   ```
-
-2. Index your documents:
+1. Install the executable:
 
    ```
-   ./draugr index -dir test_files/stories
+   go install
+   ```
+2. Display help text:
+
+   ```
+   $ draugr -help
+   Usage of draugr:
+     -client
+         Run as client
+     -debug
+         Print a lot of stuff
+     -dir string
+         index dir (default ".")
+     -exts string
+         file extensions to filter for (default ".txt .md .scala .go .hs .ts")
+     -help
+         Show help
+     -search string
+         search terms
+     -serve
+         Run as service
+
+   ```
+3. Run a local search:
+
+   ```
+   $ draugr -search water
+   test_files/essays/The-Hudson-River-And-Its-Early-Names-Susan-Fenimore-Cooper.txt
+   test_files/stories/2BR02B-Kurt-Vonnegut.txt
    ```
 
-3. Start searching:
+4. Index a directory in the background:
 
    ```
-   ./draugr search -query "your search query"
+   draugr -serve -dir ~/code/go &
+   ```
+
+5. Search it:
+
+   ```
+   $ draugr -client -search water
+   /home/bballant/code/go/draugr/test_files/essays/The-Hudson-River-And-Its-Early-Names-Susan-Fenimore-Cooper.txt
+   /home/bballant/code/go/draugr/test_files/stories/2BR02B-Kurt-Vonnegut.txt
    ```
 
 ## Testing

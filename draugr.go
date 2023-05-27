@@ -75,7 +75,7 @@ func runSearchClient(search string) {
 		log.Fatal(err)
 	}
 
-	buf := make([]byte, 1024)
+	buf := make([]byte, 10240)
 	n, err := conn.Read(buf[:])
 	if err != nil {
 		log.Fatal(err)
@@ -120,6 +120,7 @@ func main() {
 				}
 			}
 		}
+		return
 	}
 
 	if *searchFlag != "" && *clientFlag {
