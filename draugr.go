@@ -3,19 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/getlantern/systray"
-	"github.com/getlantern/systray/example/icon"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-
-	"fyne.io/fyne/v2/widget"
 	"github.com/bballant/draugr/db"
 	"github.com/bballant/draugr/words"
 )
@@ -94,20 +85,15 @@ func pathEnd(path string, lastN int) string {
 	return string(res)
 }
 
-func openTerminalAt(path string) error {
-	dirStr, _ := filepath.Split(path)
-	cmd := exec.Command("gnome-terminal", "--working-directory="+dirStr)
-	return cmd.Run()
-}
-
 func main() {
 	var helpFlag = flag.Bool("help", false, "Show help")
 	var dirFlag = flag.String("dir", ".", "index dir")
 	var searchFlag = flag.String("search", "", "search terms")
 	var extensionFilterFlag = flag.String(
-		"exts", ".txt .md .scala .go .hs",
+		"exts", ".txt .md .scala .go .hs .ts",
 		"file extensions to filter for")
 	flag.Parse()
+
 	if *helpFlag {
 		flag.Usage()
 		return
@@ -120,32 +106,14 @@ func main() {
 		for _, v := range res {
 			fmt.Println(v)
 		}
-		fmt.Println(_index.GetTerm("water"))
 		return
 	}
 
 	var _db = db.NewMapDB()
-	db.IndexPathForExts(&_db, *dirFlag, strings.Split(*extensionFilterFlag, " "))
+	//db.IndexPathForExts(&_db, *dirFlag, strings.Split(*extensionFilterFlag, " "))
+	var items []string
 
-	myApp := app.New()
-	myWin := myApp.NewWindow("Search App")
-	input := widget.NewEntry()
-	items := []string{}
-	list := widget.NewList(
-		func() int {
-			return len(items)
-		},
-		func() fyne.CanvasObject {
-			return widget.NewLabel("")
-		},
-		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			obj.(*widget.Label).SetText(items[id])
-		},
-	)
-	list.OnSelected = func(id widget.ListItemID) {
-		openTerminalAt(items[id])
-	}
-	doSearch := func(term string) {
+	_ /*doSearch*/ = func(term string) {
 		res_ := Search(&_db, words.Tokenize(term))
 		resText := ""
 		max := len(res_)
@@ -158,40 +126,6 @@ func main() {
 			cleanPath := pathEnd(v.Path, 1000)
 			items = append(items, fmt.Sprintf("%s%s (%d)", resText, cleanPath, v.Count))
 		}
-		list.Refresh()
 	}
-	input.OnSubmitted = doSearch
-	searchButton := widget.NewButton("Search", func() { doSearch(input.Text) })
-	listContainer := container.NewScroll(list)
-	listContainer.SetMinSize(fyne.NewSize(200, 300))
-	content := container.NewVBox(
-		input,
-		searchButton,
-		listContainer,
-	)
-	myWin.SetContent(content)
 
-	//if desk, ok := myApp.(desktop.App); ok {
-	//	fmt.Println("Desktop")
-	//	m := fyne.NewMenu("MyApp",
-	//		fyne.NewMenuItem("Show", func() {
-	//			myWin.Show()
-	//		}))
-	//	desk.SetSystemTrayMenu(m)
-	//}
-
-	myWin.SetCloseIntercept(func() {
-		myWin.Hide()
-	})
-	//systray.Run(onReady, onExit)
-	myWin.ShowAndRun()
-}
-
-func onExit() {
-}
-
-func onReady() {
-	systray.SetTemplateIcon(icon.Data, icon.Data)
-	systray.SetTitle("Draugr")
-	systray.SetTooltip("Draugr comes from the swamp")
 }
